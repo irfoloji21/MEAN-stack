@@ -1,73 +1,76 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { CategoriesService, Category } from '@bluebits/products';
+import { Order, OrdersService } from '@bluebits/orders';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { ORDER_STATUS } from '../order.constants';
+
 @Component({
-  selector: 'admin-categories-list',
-  templateUrl: './categories-list.component.html',
+  selector: 'admin-orders-list',
+  templateUrl: './orders-list.component.html',
   styles: []
 })
-export class CategoriesListComponent implements OnInit, OnDestroy {
-  categories: Category[] = [];
+export class OrdersListComponent implements OnInit, OnDestroy {
+  orders: Order[] = [];
+  orderStatus = ORDER_STATUS;
   endsubs$: Subject<any> = new Subject();
 
   constructor(
-    private categoriesService: CategoriesService,
+    private ordersService: OrdersService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this._getCategories();
+    this._getOrders();
   }
   ngOnDestroy() {
     this.endsubs$.next();
     this.endsubs$.complete();
   }
 
-  deleteCategory(categoryId: string) {
+  _getOrders() {
+    this.ordersService
+      .getOrders()
+      .pipe(takeUntil(this.endsubs$))
+      .subscribe((orders) => {
+        this.orders = orders;
+      });
+  }
+
+  showOrder(orderId) {
+    this.router.navigateByUrl(`orders/${orderId}`);
+  }
+
+  deleteOrder(orderId: string) {
     this.confirmationService.confirm({
-      message: 'Do you want to Delete this Category?',
-      header: 'Delete Category',
+      message: 'Do you want to Delete this Order?',
+      header: 'Delete Order',
       icon: 'pi pi-exclamation-triangle',
       accept: () => {
-        this.categoriesService
-          .deleteCategory(categoryId)
+        this.ordersService
+          .deleteOrder(orderId)
           .pipe(takeUntil(this.endsubs$))
           .subscribe(
             () => {
-              this._getCategories();
+              this._getOrders();
               this.messageService.add({
                 severity: 'success',
                 summary: 'Success',
-                detail: 'Category is deleted!'
+                detail: 'Order is deleted!'
               });
             },
             () => {
               this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'Category is not deleted!'
+                detail: 'Order is not deleted!'
               });
             }
           );
       }
     });
-  }
-
-  updateCategory(categoryid: string) {
-    this.router.navigateByUrl(`categories/form/${categoryid}`);
-  }
-
-  private _getCategories() {
-    this.categoriesService
-      .getCategories()
-      .pipe(takeUntil(this.endsubs$))
-      .subscribe((cats) => {
-        this.categories = cats;
-      });
   }
 }
